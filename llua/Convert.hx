@@ -28,8 +28,8 @@ class Convert {
 			case Type.ValueType.TInt:
 				Lua.pushinteger(l, cast(val, Int));
 			// case Type.ValueType.TFunction: 
-			// 	if(!allowFunctions) return false;
-			// 	return false;
+				// if(!allowFunctions) return false;
+				// return false;
 				// var funcIndex = -1;
 				// if(functionReferences[l] == null){
 				// 	functionReferences[l] = [val];
@@ -46,8 +46,12 @@ class Convert {
 				// 		functionReferences[l].push(val);
 				// 	}
 				// }
-				// Lua.pushnumber(l, funcIndex);
-				// Lua.pushcclosure(l, cpp.Callable.fromFunction(new cpp.Function(function(e:StatePointer):Int{return callback_handler(val,l);})),1);
+				
+				// Lua.pushcfunction(l,
+				
+				// {
+				// 	return callback_handler(val,l);
+				// }),1);
 			case Type.ValueType.TFloat:
 				Lua.pushnumber(l, val);
 			case Type.ValueType.TClass(String):
@@ -57,7 +61,7 @@ class Convert {
 			case Type.ValueType.TClass(haxe.ds.StringMap) | Type.ValueType.TClass(haxe.ds.ObjectMap):
 				mapToLua(l, val);
 			case Type.ValueType.TObject:
-				objectToLua(l, val); // {}
+				anonToLua(l, val); // {}
 			default:
 				if(enableUnsupportedTraces) trace('Haxe value of $val of type ${Type.typeof(val)} not supported!' );
 				return false;
@@ -65,26 +69,15 @@ class Convert {
 		return true;
 	}
 
-	public static function callback_handler(cbf:Dynamic,l:State/*,cbf:Dynamic,lsp:Dynamic*/):Int {
+	public static function callback_handler(cbf:Dynamic,l:State,?object:Dynamic/*,cbf:Dynamic,lsp:Dynamic*/):Int {
 		try{
-			var l:State = cast l;
-			// var cbf = null;
-			var nparams:Int = Lua.gettop(l);
-			var args:Array<Dynamic> = [];
-			// if(functionReferences[l] == null) return 0;
+			final l:State = l;
+			final nparams:Int = Lua.gettop(l);
 
-			for (i in 0...nparams) args[i] = fromLua(l, i + 1);
-			// var funcID:Int = args.shift();
-			// var cbf = functionReferences[l][funcID];
-			// trace(l,nparams,args,funcID,cbf);
 			if(cbf == null) return 0;
 
-
-			var ret:Dynamic = null;
 			/* return the number of results */
-
-			ret = Reflect.callMethod(null,cbf,args);
-			trace(ret);
+			final ret:Dynamic = Reflect.callMethod(object,cbf,[for (i in 0...nparams) fromLua(l, i + 1)]);
 			if(ret != null){
 				toLua(l, ret);
 				return 1;
@@ -97,23 +90,18 @@ class Convert {
 
 	}
 
-	public static inline function arrayToLua(l:State, arr:Array<Any>) {
-
-		var size:Int = arr.length;
-		Lua.createtable(l, size, 0);
-
-		for (i in 0...size) {
+	@:keep public static inline function arrayToLua(l:State, arr:Array<Any>) {
+		Lua.createtable(l, arr.length, 0);
+		for (i => v in arr) {
 			Lua.pushnumber(l, i + 1);
-			toLua(l, arr[i]);
+			toLua(l, v);
 			Lua.settable(l, -3);
 		}
 
 	}
 
-	static inline function mapToLua(l:State, res:Map<String,Dynamic>) {
-		var tLen = 0;
-		for(n in res) tLen++;
-		Lua.createtable(l, tLen, 0);
+	@:keep static inline function mapToLua(l:State, res:Map<String,Dynamic>) {
+		Lua.createtable(l, 0, 0);
 		for (index => val in res){
 			Lua.pushstring(l, Std.string(index));
 			toLua(l, val);
@@ -122,36 +110,53 @@ class Convert {
 
 	}
 
-	static inline function objectToLua(l:State, res:Any) {
-		Lua.createtable(l, Reflect.fields(res).length, 0);
+	@:keep static inline function anonToLua(l:State, res:Any) {
+		Lua.createtable(l, 0, 0);
 		for (n in Reflect.fields(res)){
 			Lua.pushstring(l, n);
 			toLua(l, Reflect.field(res, n));
 			Lua.settable(l, -3);
 		}
-
 	}
+	// @:keep static inline function instanceToLua(l:State, res:Any) {
+	// 	Lua.createtable(l, 0, 0);
+	// 	Lua.pushstring(l, "__index");
 
+	// 	// for (n in Reflect.fields(res)){
+	// 	// 	Lua.pushstring(l, n);
+	// 	// 	toLua(l, Reflect.field(res, n));
+	// 	// 	Lua.settable(l, -3);
+	// 	// }
+	// }
+
+	@:keep public static inline function setGlobal(l:State, index:String, value:Dynamic) {
+		// Lua.getglobal(l, Lua.LUA_GLOBALSINDEX);
+		// toLua(l, index);
+
+		toLua(l, value);
+		Lua.setfield(l, Lua.LUA_GLOBALSINDEX, index);
+		// Lua.settable(l, -3);
+		// Lua.pop(l,0);
+	}
 	/**
 	 * From Lua
 	 */
 	public static function fromLua(l:State, v:Int):Any {
 
-		var ret:Any = null;
-		var luaType = Lua.type(l, v);
-		switch(luaType) {
+		final luaType = Lua.type(l, v);
+		return switch(luaType) {
 			case Lua.LUA_TNIL:
-				ret = null;
+				null;
 			case Lua.LUA_TBOOLEAN:
-				ret = Lua.toboolean(l, v);
+				Lua.toboolean(l, v);
 			case Lua.LUA_TNUMBER:
-				ret = Lua.tonumber(l, v);
+				Lua.tonumber(l, v);
 			case Lua.LUA_TSTRING:
-				ret = Lua.tostring(l, v);
+				Lua.tostring(l, v);
 			case Lua.LUA_TTABLE:
-				ret = toHaxeObj(l, v);
+				toHaxeObj(l, v);
 			case Lua.LUA_TFUNCTION: // From https://github.com/DragShot/linc_luajit/
-				ret = new LuaCallback(l, LuaL.ref(l, Lua.LUA_REGISTRYINDEX));
+				new LuaCallback(l, LuaL.ref(l, Lua.LUA_REGISTRYINDEX));
 			// 	trace("function\n");
 			// case Lua.LUA_TUSERDATA:
 			// 	ret = LuaL.ref(l, Lua.LUA_REGISTRYINDEX);
@@ -163,11 +168,9 @@ class Convert {
 			// 	ret = null;
 			// 	trace("thread\n");
 			default:
-				ret = null;
 				if(enableUnsupportedTraces) trace('Return value $v of type $luaType not supported');
+				null;
 		}
-
-		return ret;
 
 	}
 
@@ -225,41 +228,73 @@ class Convert {
 	}
 
 }*/
-	static function toHaxeObj(l, i:Int):Any {
-		var count = 0;
+	public static function toHaxeObj(l, i:Int):Any {
+		var hasItems = false;
 		var array = true;
 
-		loopTable(l, i, {
-			if(array) {
-				if(Lua.type(l, -2) != Lua.LUA_TNUMBER) array = false;
-				else {
-					var index = Lua.tonumber(l, -2);
-					if(index < 0 || Std.int(index) != index) array = false;
-				}
+		loopTable(l, i,{
+			hasItems = true;
+			if(Lua.type(l, -2) != Lua.LUA_TNUMBER){
+				array = false; 
 			}
-			count++;
+			final index = Lua.tonumber(l, -2);
+			if(index < 0 || Std.int(index) != index) {
+				array = false; 
+			}
 		});
+		if(!hasItems) return {}
 
-		return
-		if(count == 0) {
-			{};
-		} else if(array) {
-			var v = [];
+		if(array) {
+			final v:Array<Dynamic> = [];
 			loopTable(l, i, {
-				var index = Std.int(Lua.tonumber(l, -2)) - 1;
-				v[index] = fromLua(l, -1);
+				v[Std.int(Lua.tonumber(l, -2)) - 1] = fromLua(l, -1);
 			});
-			cast v;
-		} else {
-			var v:DynamicAccess<Any> = {};
-			loopTable(l, i, {
-				switch Lua.type(l, -2) {
-					case t if(t == Lua.LUA_TSTRING): v.set(Lua.tostring(l, -2), fromLua(l, -1));
-					case t if(t == Lua.LUA_TNUMBER):v.set(Std.string(Lua.tonumber(l, -2)), fromLua(l, -1));
-				}
-			});
-			cast v;
+			return cast v;
 		}
+		final v:DynamicAccess<Any> = {};
+		loopTable(l, i, {
+			switch Lua.type(l, -2) {
+				case t if(t == Lua.LUA_TSTRING): v.set(Lua.tostring(l, -2), fromLua(l, -1));
+				case t if(t == Lua.LUA_TNUMBER):v.set(Std.string(Lua.tonumber(l, -2)), fromLua(l, -1));
+			}
+		});
+		return v;
+		
+	}
+	/**
+		Calls a lua function at `func` with `args`. If multipleReturns is true, return an array of results from the function, else return the first result
+
+		If func is nil, the function at the top of the stack will be run
+		If the lua function errors, a llua.LuaException will be thrown
+	**/
+	public static function callLuaFunction(l, ?func:String,?args:Array<Dynamic> = null,?multipleReturns:Bool=false):Dynamic {
+		if(func != null) Lua.getglobal(l, func);
+		if(args != null) {
+			for(arg in args) Convert.toLua(l,arg);
+		}
+		LuaException.ifErrorThrow(l,Lua.pcall(l, args == null ? 0 : args.length, multipleReturns ? Lua.LUA_MULTRET : 1,0));
+
+		if(!multipleReturns) return fromLua(l,fromLua(l,-1));
+		final returnArray = [];
+		for(i in -(Lua.gettop(l)-1)...0){
+			returnArray.push(fromLua(l,i));
+		}
+		return returnArray;
+
+	}
+	/**
+		Calls a lua function at `func` with `args`.
+
+		If func is nil, the function at the top of the stack will be run
+		If the lua function errors, a llua.LuaException will be thrown
+
+		This is SLIGHTLY faster than callLuaFunction since it doesn't do any handling of returns. Useful for things like calling an event that doesn't return anything
+	**/
+	public static function callLuaFuncNoReturns(l, func:String,?args:Array<Dynamic> = null):Void {
+		Lua.getglobal(l, func);
+		if(args != null) for(arg in args) Convert.toLua(l,arg);
+		
+		LuaException.ifErrorThrow(l,Lua.pcall(l,args == null ? 0 : args.length, 0,0));
 	}
 }
 

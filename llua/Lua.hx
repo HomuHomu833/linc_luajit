@@ -11,6 +11,9 @@ import llua.Convert;
 @:build(linc.Linc.touch())
 @:build(linc.Linc.xml('lua'))
 #end
+// #if (lime && flixel && (!NO_PRECOMPILED_HEADERS || SHUT_UP_LINC_LUAJIT))
+// #trace "\nlinc_luajit might require `NO_PRECOMPILED_HEADERS` to be set in your project.xml\nThis error is to help anyone compiling certain FNF engines that don't have this set already\nONLY IF YOU KNOW WHAT YOU'RE DOING, add '<haxedef name=\"SHUT_UP_LINC_LUAJIT\"/>' to your project.xml\n\nTO FIX: Add '<haxedef name=\"NO_PRECOMPILED_HEADERS\"/>' to your project.xml right before '</project>'." 
+// #end
 extern class Lua {
 
 	@:native('lua_upvalueindex')

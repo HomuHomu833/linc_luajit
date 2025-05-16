@@ -4,7 +4,7 @@
 	"license": "MIT",
 	"tags": ["lua","luajit","linc","bindings"],
 	"description": "Haxe/hxcpp @:native bindings for LuaJIT.",
-	"version": "0.0.7",
+	"version": "0.0.8",
 	"releasenote": "",
 	"contributors": ["RudenkoArts", "NebulaZorua",	"Superpowers04", "DragShot"]
 }

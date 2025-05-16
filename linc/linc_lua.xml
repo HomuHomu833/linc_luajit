@@ -11,8 +11,11 @@
     <files id="__main__">
         <compilerflag value='-I${LINC_LUA_PATH}linc/'/>
     </files>
-    
+    <section id = "vars">
+		<set name = "NO_PRECOMPILED_HEADERS" value = "1" />
+    </section>
     <target id="haxe">
+
         <section if="windows" unless="mingw">
             <lib name='${LINC_LUA_PATH}lib/lua/lib/Windows64/lua51.lib' if='HXCPP_M64' />
             <lib name='${LINC_LUA_PATH}lib/lua/lib/Windows/lua51.lib' if='HXCPP_M32' />
