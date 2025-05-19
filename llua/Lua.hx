@@ -224,7 +224,7 @@ extern class Lua {
 	// static function pushfstring(l:State, fmt:String, ...) : Void;
 
 	@:native('linc::lua::pushcclosure')
-	static function pushcclosure(l:State, fn:cpp.Callable<StatePointer>, n:Int) : Void;
+	static function pushcclosure(l:State, fn:cpp.Callable<StatePointer->Int>, n:Int) : Void;
 
 
 	@:noCompletion
@@ -500,8 +500,7 @@ extern class Lua {
 	@:native('linc::lua::versionJIT')
 	static function versionJIT() : String;
 
-	static inline function init_callbacks(l:State) : Void {
-
+	static inline function init_callbacks(?l:State) : Void {
 		Lua.set_callbacks_function(cpp.Callable.fromStaticFunction(Lua_helper.callback_handler));
 
 	}
@@ -568,7 +567,6 @@ class Lua_helper {
 	public static var sendErrorsToLua:Bool = true;
 	public static inline function callback_handler(l:State, fname:String):Int {
 		try{
-
 			var cbf = callbacks.get(fname);
 
 			if(cbf == null) return 0;
