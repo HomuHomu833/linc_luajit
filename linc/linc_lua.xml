@@ -22,7 +22,8 @@
             <lib name='${LINC_LUA_PATH}lib/lua/lib/Windows/lua51.lib' if='HXCPP_M32' />
         </section>
          <section if="mingw">
-            <lib name='${LINC_LUA_PATH}lib/lua/lib/Windows64/libluajit-5.1.a' if='HXCPP_M64' />
+            <lib name='${LINC_LUA_PATH}lib/lua/lib/Windows64/libluajit-5.1.a' if='HXCPP_M64' unless='HXCPP_ARM64' />
+            <lib name='${LINC_LUA_PATH}lib/lua/lib/WindowsArm64/libluajit-5.1.a' if='HXCPP_ARM64' />
             <lib name='${LINC_LUA_PATH}lib/lua/lib/Windows/libluajit-5.1.a' if='HXCPP_M32' />
         </section>
         <section if="linux">
