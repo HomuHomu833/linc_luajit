@@ -11,8 +11,8 @@
     <files id="__main__">
         <compilerflag value='-I${LINC_LUA_PATH}linc/'/>
     </files>
-    <section id = "vars">
-		<set name = "NO_PRECOMPILED_HEADERS" value = "1" />
+    <section id="vars">
+		<set name="NO_PRECOMPILED_HEADERS" value="1" if="linux" />
     </section>
     <target id="haxe">
 
